@@ -1,3 +1,30 @@
+# API-Fabricante-Revendedor
+
+Prova de conceito Java de comunicação entre fabricante, revenda e catálogo de produtos.
+
+## Stack
+Java Servlets, Maven, JSP e persistência relacional.
+
+## Primeira verificação
+```bash
+cd ProdutosAPI && mvn test
+```
+
+Os comandos exigem ambiente apropriado e não foram executados aqui.
+
+## Onde começar
+Dell/, fujioka/, ProdutosAPI/.
+
+## Cuidados
+Existem arquivos .env rastreados em subprojetos; verificar imediatamente se contêm credenciais e rotacionar segredos se necessário. Projeto não é produção.
+
+## Documentos
+[Requisitos](docs/REQUISITOS.md) · [Arquitetura](docs/ARQUITETURA.md) · [UML](docs/UML.puml) · [Plano de testes](docs/PLANO_TESTES.md) · [Contexto IA](AGENTS.md).
+
+---
+
+## Documentação original preservada
+
 # API Fabricante ↔ Revenda — Projeto de Estudo
 
 Um projeto de estudo para explorar modelos de implementação e padronização da comunicação entre fabricantes e revendas autorizadas.  
