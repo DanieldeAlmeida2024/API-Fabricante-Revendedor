@@ -208,3 +208,7 @@ Contato / Maintainer
 
 Notas finais (contexto educacional)
 Este repositório é intencionalmente simples para permitir experimentação e discussão sobre a padronização da comunicação entre fabricantes e revendas. Ele serve como ponto de partida para avaliar pontos críticos (contratos, validação, segurança, versionamento e teste de contrato) antes de uma implementação de produção.
+
+## Documentação detalhada e específica (v1.0.0)
+
+[Projeto](docs/projeto/ESPECIFICACAO.md) · [UML](docs/uml/README.md) · [Testes](docs/testes/PLANO_DE_TESTES.md) · [Versões](docs/controle/VERSIONAMENTO.md)

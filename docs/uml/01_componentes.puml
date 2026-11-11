@@ -1,0 +1,21 @@
+@startuml
+node "ProdutosAPI (Servlet)" as Api {
+component "ProdutoController" as C
+component "ProdutoService" as S
+component "ProdutoDao JDBC" as D
+}
+database "Banco produtos" as DB
+node "Dell (cliente HTTP/JSP)" as Dell {
+component "DellAPIService" as H
+}
+node "fujioka (revendedor JSP)" as Fuji {
+component "ProdutosDellController" as F
+component "index.jsp" as JSP
+}
+C --> S
+S --> D
+D --> DB
+H --> C : GET/POST/PUT/DELETE HTTP
+F --> H : catálogo Dell
+F --> JSP : RequestDispatcher.forward
+@enduml

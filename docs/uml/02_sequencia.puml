@@ -1,0 +1,20 @@
+@startuml
+actor "Revendedor" as U
+participant "ProdutosDellController" as F
+participant "DellAPIService" as Dell
+participant "ProdutoController" as API
+participant "ProdutoDao" as DAO
+database DB
+participant "index.jsp" as JSP
+U -> F : GET /dell
+F -> Dell : getProdutosDell()
+Dell -> API : GET catalogo
+API -> DAO : getAllProdutos()
+DAO -> DB : SELECT * FROM produtos
+DB --> DAO : linhas
+DAO --> API : lista
+API --> Dell : JSON
+Dell --> F : List<ProdutoDell>
+F -> JSP : forward(request, response)
+JSP --> U : HTML
+@enduml
