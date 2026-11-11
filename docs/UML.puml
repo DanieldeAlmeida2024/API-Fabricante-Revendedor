@@ -1,0 +1,10 @@
+@startuml
+title API-Fabricante-Revendedor - componentes conceituais
+actor Operador
+component Entrada
+component Aplicacao
+component Infraestrutura
+Operador --> Entrada
+Entrada --> Aplicacao
+Aplicacao --> Infraestrutura
+@enduml
