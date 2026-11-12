@@ -39,3 +39,10 @@ Branch `fix/produtosapi-crud-sqlite-errors-20261112` empilhada sobre PR #2 (docu
 | FUJ-DOC | Projeto, matriz e PlantUML próprios | `docs/projeto/FUJIOKA_INTEGRACAO_E_JSP.md`, `docs/testes/FUJIOKA_CONTRATOS_JSP.md`, `docs/uml/04_fujioka_catalogo_seguranca.puml` |
 
 PR empilhado sobre #3 (que depende do documental #2), sem deploy/merge. **PENDENTES:** testes JSP/Tomcat reais, autenticação e TLS, fluxo CRUD completo da revenda e externalização efetiva das URLs. Remoção de `.env` do HEAD não reescreve commits antigos. Registrar SHA/resultado CI somente após sua execução.
+
+### Validação confirmada — FR-FUJ v1.2.0
+
+- **HEAD funcional:** `5ef17a7549b6efb21966ff4d1fbe7da446ad6122`.
+- [GitHub Actions #43225983805](https://github.com/DanieldeAlmeida2024/API-Fabricante-Revendedor/actions/runs/43225983805) e [#43226000243](https://github.com/DanieldeAlmeida2024/API-Fabricante-Revendedor/actions/runs/43226000243): **SUCCESS**, três Maven WARs (ProdutosAPI, Dell, Fujioka), 18 testes JUnit3 e testes estáticos/documentais Python.
+- Na execução inicial do PR #4 o teste de saída JSP sinalizou equivocadamente uma expressão de template literal JavaScript seguro `option.textContent` como JSP EL; oráculo corrigido para rejeitar iteração/EL JSP dentro do script, preservando os escapes HTML do código. Código funcional não foi relaxado.
+- **Pendente:** executar JSP/Tomcat real, ataques dinâmicos XSS, integração dos três WARs, externalização efetiva do host, autenticação e TLS. Esta revisão documental gera novo HEAD e deve passar CI novamente antes de merge.

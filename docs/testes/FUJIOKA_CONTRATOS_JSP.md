@@ -29,3 +29,9 @@ test -z "$(git ls-files -- Dell/.env fujioka/.env)"
 ```
 
 O workflow `.github/workflows/produtos-api-ci.yml` deve reportar os três WARs (6+6+6 testes Java) e os testes documentais/JSP. **Não afirmar PASS do novo HEAD antes de consultar GitHub Actions**. Os cenários FUJ-12..FUJ-14 não são cobertos por essas suites.
+
+### Resultado CI observado
+
+Em `5ef17a7549b6efb21966ff4d1fbe7da446ad6122`, os workflows [#43225983805](https://github.com/DanieldeAlmeida2024/API-Fabricante-Revendedor/actions/runs/43225983805) e [#43226000243](https://github.com/DanieldeAlmeida2024/API-Fabricante-Revendedor/actions/runs/43226000243) terminaram **SUCCESS**, incluindo três builds Maven WAR, 18 testes Java de contratos e testes Python estáticos (JSP e `.env`). O primeiro CI identificou um falso positivo no oráculo estático de template JavaScript, corrigido no último commit de código. 
+
+**FUJ-12 a FUJ-14 continuam pendentes**; um CI verde sem Tomcat/Jasper não comprova renderização JSP nem segurança dinâmica no navegador.
