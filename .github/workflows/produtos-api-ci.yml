@@ -3,7 +3,7 @@ name: API Fabricante-Revendedor - Contratos ProdutosAPI Dell Fujioka
 on:
   pull_request:
   push:
-    branches: [main, fix/produtosapi-crud-sqlite-errors-20261112]
+    branches: [main, fix/produtosapi-crud-sqlite-errors-20261112, fix/fujioka-upstream-errors-and-jsp-safety-20261112]
 
 permissions:
   contents: read
@@ -29,5 +29,11 @@ jobs:
         run: mvn -B -ntp -f Dell/pom.xml clean verify
       - name: Validar consumidor Fujioka com HTTP loopback
         run: mvn -B -ntp -f fujioka/pom.xml clean verify
+      - name: Prevenir arquivos de configuração locais versionados
+        run: |
+          if test -n "$(git ls-files -- Dell/.env fujioka/.env)"; then
+            echo "ERRO: arquivos .env locais rastreados no Git"
+            exit 1
+          fi
       - name: Validar documentação versionada
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v

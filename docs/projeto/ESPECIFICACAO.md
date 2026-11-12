@@ -21,3 +21,7 @@ Outros módulos têm comandos próprios; consultar seu `pom.xml` antes de execut
 ## Atualização FR-CRUD v1.1.0 — contrato implementado de SQLite e cliente Dell
 
 Os problemas de `ResultSet` e de sucesso falso documentados na v1.0.0 foram tratados nesta branch proposta: o DAO usa `next()`, retorna `null` quando não há ID, informa linhas modificadas e propaga `SQLException`; a camada Servlet responde status coerentes, e o consumidor Dell usa Gson + validação de 2xx. [Detalhamento próprio](CONTRATO_SQLITE_CRUD_V1_1.md). Os `.env` rastreados foram examinados **por nomes de campos** e contêm parâmetros de endpoint/porta, sem senha/token identificado; ainda devem sair do versionamento em revisão separada.
+
+## Atualização FUJ v1.2.0 — consumidor da revenda
+
+`fujioka` agora valida HTTP 2xx, exige array JSON na listagem e devolve erro de dependência 502/503 no Servlet; a JSP evita interpolar strings do catálogo em JavaScript e usa `c:out` para HTML. Os `.env` de Dell/Fujioka saíram do HEAD e têm exemplos documentais sem autoload. [Especificação dedicada do módulo Fujioka](FUJIOKA_INTEGRACAO_E_JSP.md). **Sem Tomcat/JSP E2E ou habilitação em produção.**

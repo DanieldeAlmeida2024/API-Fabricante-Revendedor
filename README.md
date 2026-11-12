@@ -16,7 +16,7 @@ Os comandos exigem ambiente apropriado e não foram executados aqui.
 Dell/, fujioka/, ProdutosAPI/.
 
 ## Cuidados
-Existem arquivos .env rastreados em subprojetos; verificar imediatamente se contêm credenciais e rotacionar segredos se necessário. Projeto não é produção.
+Os arquivos `.env` de Dell/Fujioka foram excluídos do HEAD na revisão FR-FUJ v1.2.0 e substituídos por exemplos; o histórico Git ainda os contém. Não foram identificados tokens/senhas nos campos examinados. O código Java atual não carrega esses exemplos. Projeto não é produção.
 
 ## Documentos
 [Requisitos](docs/REQUISITOS.md) · [Arquitetura](docs/ARQUITETURA.md) · [UML](docs/UML.puml) · [Plano de testes](docs/PLANO_TESTES.md) · [Contexto IA](AGENTS.md).
@@ -216,3 +216,7 @@ Este repositório é intencionalmente simples para permitir experimentação e d
 ## Correção de contrato CRUD / JDBC e cliente Dell — v1.1.0 proposta
 
 A consulta SQLite por ID agora avança o cursor; operações com erro ou ID ausente não geram falso sucesso. A camada `ProdutosAPI` distingue 201/400/404/500. O consumidor Dell serializa produto via Gson e rejeita HTTP não-2xx. Os testes utilizam SQLite em memória e `HttpServer` loopback; não usam bancos/serviços reais. Reproduzir com `mvn -B -ntp -f ProdutosAPI/pom.xml clean verify` e `mvn -B -ntp -f Dell/pom.xml clean verify`. [Projeto](docs/projeto/CONTRATO_SQLITE_CRUD_V1_1.md), [testes](docs/testes/EXECUCAO_JDBC_HTTP_LOCAL.md), [UML](docs/uml/03_fluxo_crud_dell_sqlite.puml), [versionamento](docs/controle/VERSIONAMENTO.md). O módulo Fujioka e a autenticação/TLS não foram alterados; uso real ainda exige revisão.
+
+## Fujioka — validação de catálogo e apresentação segura (FR-FUJ v1.2.0 proposta)
+
+A interface `/dell` passa a tratar falha da API como 502/503, sem dar sucesso falso nem imprimir o body upstream. A JSP usa `c:out` para atributos/texto de produto e gera a busca a partir de `dataset` no DOM, evitando interpolação de fornecedores em literais JS. Dois arquivos `.env` deixam de ser rastreados; os respectivos `.env.example` são modelos **não carregados automaticamente** pelo código atual. O CI valida contratos HTTP locais de Fujioka, Maven dos três módulos e verificações estáticas de JSP. [Projeto](docs/projeto/FUJIOKA_INTEGRACAO_E_JSP.md) · [Matriz](docs/testes/FUJIOKA_CONTRATOS_JSP.md) · [UML](docs/uml/04_fujioka_catalogo_seguranca.puml).

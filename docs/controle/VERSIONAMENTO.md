@@ -25,3 +25,17 @@ MAJOR para contratos incompatíveis, MINOR para módulo/fluxo novo, PATCH para c
 | FR-DOC | Arquitetura própria, matriz de teste executada, UML editável | `docs/projeto/CONTRATO_SQLITE_CRUD_V1_1.md`, `docs/testes/EXECUCAO_JDBC_HTTP_LOCAL.md`, `docs/uml/03_fluxo_crud_dell_sqlite.puml` |
 
 Branch `fix/produtosapi-crud-sqlite-errors-20261112` empilhada sobre PR #2 (documentação própria). [CI #43221444058](https://github.com/DanieldeAlmeida2024/API-Fabricante-Revendedor/actions/runs/43221444058) **12 JUnit3 PASS, dois Maven WAR PASS**, commit `275221ee0a95c6ad45683d75478b31f0f3b88c9c`. Ainda **não** houve deploy/Teste E2E Tomcat, Fujioka ou migração de banco; todos pendentes. Revisar CI novamente no commit final de documentação.
+
+## FR-FUJ v1.2.0 proposta — 12/11/2026
+
+| ID | Mudança | Artefato |
+|---|---|---|
+| FUJ-HTTP | Rejeitar HTTP não-2xx e JSON inválido, sem log de body; GET ID objeto/lista | `fujioka/.../api/service/DellAPIService.java` |
+| FUJ-SERVLET | Mapear falha upstream a 502 e interrupção a 503, sem forward indevido | `fujioka/.../controller/ProdutosDellController.java` |
+| FUJ-JSP | Escapar valores em HTML/JSP e gerar dados JS apenas de DOM `dataset` | `fujioka/src/main/webapp/WEB-INF/views/index.jsp` |
+| FUJ-ENV | Remover `Dell/.env`, `fujioka/.env` do HEAD, introduzir `.env.example` e `.gitignore` raiz | arquivos config dos módulos Dell/Fujioka |
+| FUJ-CI | Maven `clean verify` do Fujioka, testes estáticos JSP + bloqueio de `.env` rastreado | `.github/workflows/produtos-api-ci.yml` |
+| FUJ-TEST | Seis testes JUnit3 em HTTP loopback + quatro testes Python estáticos | `fujioka/src/test/`, `tests/test_fujioka_jsp_security.py` |
+| FUJ-DOC | Projeto, matriz e PlantUML próprios | `docs/projeto/FUJIOKA_INTEGRACAO_E_JSP.md`, `docs/testes/FUJIOKA_CONTRATOS_JSP.md`, `docs/uml/04_fujioka_catalogo_seguranca.puml` |
+
+PR empilhado sobre #3 (que depende do documental #2), sem deploy/merge. **PENDENTES:** testes JSP/Tomcat reais, autenticação e TLS, fluxo CRUD completo da revenda e externalização efetiva das URLs. Remoção de `.env` do HEAD não reescreve commits antigos. Registrar SHA/resultado CI somente após sua execução.

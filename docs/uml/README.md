@@ -8,3 +8,5 @@
 Os módulos e interfaces seguem o código existente; diagramas são fontes editáveis PlantUML.
 
 - [Sequência CRUD SQLite e integração Dell/HTTP com falha propagada](03_fluxo_crud_dell_sqlite.puml) — FR-CRUD v1.1.0 proposta.
+
+- [Fujioka: consulta upstream, erros 502/503 e escape de catálogo no JSP](04_fujioka_catalogo_seguranca.puml) — FR-FUJ v1.2.0 proposta, sem teste Tomcat.
