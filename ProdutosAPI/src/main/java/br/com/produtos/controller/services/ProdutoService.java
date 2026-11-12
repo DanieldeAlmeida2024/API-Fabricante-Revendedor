@@ -3,141 +3,137 @@ package br.com.produtos.controller.services;
 import br.com.produtos.model.Produto;
 import br.com.produtos.persistence.ProdutoDao;
 import com.google.gson.Gson;
-
+import com.google.gson.JsonSyntaxException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.List;
 
 public abstract class ProdutoService {
     private static final Gson gson = new Gson();
-    static ProdutoDao dao = new ProdutoDao();
-    public static void get(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    private static final ProdutoDao dao = new ProdutoDao();
 
-        //GET Se passar o parametro ID
-        String idParam = request.getParameter("id");
-        if (idParam != null && !idParam.isEmpty()) {
-            try{
-                Produto produto = dao.getProdutoById(Integer.parseInt(request.getParameter("id")));
-                response.setContentType("application/json");
-                response.setCharacterEncoding("UTF-8");
-                String jsonResponse = gson.toJson(produto);
-                response.getWriter().write(jsonResponse);
-            } catch (NumberFormatException | IOException e) {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                try {
-                    response.getWriter().write("{\"error\":\"ID inválido ou erro interno.\"}");
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                }
-                e.printStackTrace();
-            }
-        } else { //GET Se não passar, Busca todos os registros
-            try {
-                List<Produto> produtos = dao.getAllProdutos();
-                response.setContentType("application/json");
-                response.setCharacterEncoding("UTF-8");
-                Gson gson = new Gson();
-                String jsonResponse = gson.toJson(produtos);
-                response.getWriter().write(jsonResponse);
-            } catch (NumberFormatException | IOException e){
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                try {
-                    response.getWriter().write("{\"error\":\"erro interno.\"}");
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                }
-                e.printStackTrace();
-            }
-        }
+    private static boolean validProduto(Produto p) {
+        return p != null &&
+               p.getNomeProduto() != null && !p.getNomeProduto().trim().isEmpty() &&
+               p.getCategoria() != null && !p.getCategoria().trim().isEmpty() &&
+               Double.isFinite(p.getPreco()) && p.getPreco() > 0.0;
     }
-        public static void post(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-            request.setCharacterEncoding("UTF-8");
 
-            String jsonBody = null;
-            try (BufferedReader reader = request.getReader()) {
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line);
-                }
-                jsonBody = sb.toString();
-                jsonBody = jsonBody.trim();
-                Produto produto = gson.fromJson(jsonBody, Produto.class);
-
-                System.out.println("Produto: " + produto.getNomeProduto() + " Categoria: " + produto.getCategoria() + " Preço: " + produto.getPreco());
-
-                if (produto != null && produto.getNomeProduto() != null && produto.getCategoria() != null && produto.getPreco() > 0) {
-                    dao.insertProduto(produto);
-                    response.setStatus(HttpServletResponse.SC_CREATED);
-                    response.getWriter().write(gson.toJson("Produto adicionado com sucesso."));
-                } else {
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    response.getWriter().write(gson.toJson("Dados do produto inválidos."));
-                }
-            } catch (com.google.gson.JsonSyntaxException e) {
-                System.err.println("Erro de sintaxe JSON. Body: [" + jsonBody + "]");
-                e.printStackTrace();
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write(gson.toJson("Erro: O JSON enviado está malformado."));
-            } catch (Exception e) {
-                System.err.println("Erro inesperado no servidor: " + e.getMessage());
-                e.printStackTrace();
-                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                response.getWriter().write(gson.toJson("Erro ao processar a requisição."));
-            }
-        }
-
-    public static void put(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException{
-        int idProduto = Integer.parseInt(request.getParameter("id"));
-        if (idProduto == 0) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write(gson.toJson("O parâmetro 'ID' é obrigatório."));
-            return;
-        }
-
-        String jsonBody = null;
-        try (BufferedReader reader = request.getReader()) {
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-            jsonBody = sb.toString();
-            jsonBody = jsonBody.trim();
-            Produto produtoAtualizado = gson.fromJson(jsonBody, Produto.class);
-            if (produtoAtualizado != null && produtoAtualizado.getNomeProduto() != null && produtoAtualizado.getCategoria() != null && produtoAtualizado.getPreco() > 0) {
-                dao.updateProduto(idProduto, produtoAtualizado);
-                response.setStatus(HttpServletResponse.SC_OK);
-                response.getWriter().write(gson.toJson("Produto atualizado com sucesso."));
-            } else {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write(gson.toJson("Dados do produto inválidos."));
-            }
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write(gson.toJson("Erro ao processar a requisição."));
-        }
+    private static int parseId(String value) {
+        final int id = Integer.parseInt(value);
+        if (id <= 0) throw new NumberFormatException("ID deve ser positivo");
+        return id;
     }
-    public static void delete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException{
-        int idProduto = Integer.parseInt(request.getParameter("id"));
-        if (idProduto == 0) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write(gson.toJson("O parâmetro 'ID' é obrigatório para exclusão."));
-            return;
-        }
 
+    private static void respond(HttpServletResponse response, int status, String payload)
+            throws IOException {
+        response.setStatus(status);
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json");
+        response.getWriter().write(payload);
+    }
+
+    private static void error(HttpServletResponse response, int status, String message)
+            throws IOException {
+        respond(response, status, gson.toJson(java.util.Collections.singletonMap("error", message)));
+    }
+
+    public static void get(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
         try {
-            dao.deleteProduto(idProduto);
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.getWriter().write(gson.toJson("Produto excluído com sucesso."));
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write(gson.toJson("Erro ao excluir o produto."));
+            final String rawId = request.getParameter("id");
+            if (rawId != null) {
+                final Produto produto = dao.getProdutoById(parseId(rawId));
+                if (produto == null) {
+                    error(response, HttpServletResponse.SC_NOT_FOUND, "Produto não encontrado.");
+                } else {
+                    respond(response, HttpServletResponse.SC_OK, gson.toJson(produto));
+                }
+            } else {
+                final List<Produto> produtos = dao.getAllProdutos();
+                respond(response, HttpServletResponse.SC_OK, gson.toJson(produtos));
+            }
+        } catch (NumberFormatException e) {
+            error(response, HttpServletResponse.SC_BAD_REQUEST, "ID de produto inválido.");
+        } catch (RuntimeException e) {
+            error(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Falha ao consultar produtos.");
+        }
+    }
+
+    public static void post(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
+        try {
+            final Produto produto = gson.fromJson(request.getReader(), Produto.class);
+            if (!validProduto(produto)) {
+                error(response, HttpServletResponse.SC_BAD_REQUEST, "Dados do produto inválidos.");
+                return;
+            }
+            final int changed = dao.insertProduto(produto);
+            if (changed != 1) {
+                error(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Falha ao criar produto.");
+                return;
+            }
+            respond(response, HttpServletResponse.SC_CREATED,
+                gson.toJson(java.util.Collections.singletonMap("message", "Produto criado.")));
+        } catch (JsonSyntaxException e) {
+            error(response, HttpServletResponse.SC_BAD_REQUEST, "JSON inválido.");
+        } catch (RuntimeException e) {
+            error(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Falha ao criar produto.");
+        }
+    }
+
+    public static void put(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        request.setCharacterEncoding("UTF-8");
+        final int id;
+        try {
+            id = parseId(request.getParameter("id"));
+        } catch (NumberFormatException e) {
+            error(response, HttpServletResponse.SC_BAD_REQUEST, "ID de produto inválido.");
+            return;
+        }
+        try {
+            final Produto produto = gson.fromJson(request.getReader(), Produto.class);
+            if (!validProduto(produto)) {
+                error(response, HttpServletResponse.SC_BAD_REQUEST, "Dados do produto inválidos.");
+                return;
+            }
+            final int changed = dao.updateProduto(id, produto);
+            if (changed == 0) {
+                error(response, HttpServletResponse.SC_NOT_FOUND, "Produto não encontrado.");
+                return;
+            }
+            respond(response, HttpServletResponse.SC_OK,
+                gson.toJson(java.util.Collections.singletonMap("message", "Produto atualizado.")));
+        } catch (JsonSyntaxException e) {
+            error(response, HttpServletResponse.SC_BAD_REQUEST, "JSON inválido.");
+        } catch (RuntimeException e) {
+            error(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Falha ao atualizar produto.");
+        }
+    }
+
+    public static void delete(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        final int id;
+        try {
+            id = parseId(request.getParameter("id"));
+        } catch (NumberFormatException e) {
+            error(response, HttpServletResponse.SC_BAD_REQUEST, "ID de produto inválido.");
+            return;
+        }
+        try {
+            final int changed = dao.deleteProduto(id);
+            if (changed == 0) {
+                error(response, HttpServletResponse.SC_NOT_FOUND, "Produto não encontrado.");
+                return;
+            }
+            respond(response, HttpServletResponse.SC_OK,
+                gson.toJson(java.util.Collections.singletonMap("message", "Produto excluído.")));
+        } catch (RuntimeException e) {
+            error(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Falha ao excluir produto.");
         }
     }
 }
-
-

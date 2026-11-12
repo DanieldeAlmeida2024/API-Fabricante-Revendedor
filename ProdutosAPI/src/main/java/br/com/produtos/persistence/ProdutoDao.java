@@ -1,5 +1,5 @@
 package br.com.produtos.persistence;
-import br.com.produtos.persistence.Connect;
+
 import br.com.produtos.model.Produto;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -9,96 +9,98 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ProdutoDao {
-
-    private Connection connection;
+    private final Connection connection;
 
     public ProdutoDao() {
-        Connect conexao = new Connect();
-        this.connection = conexao.getConnection();
+        this(new Connect().getConnection());
     }
 
+    // Injeção de Connection permite testes SQLite in-memory sem criar produtos.db.
+    public ProdutoDao(Connection connection) {
+        if (connection == null) {
+            throw new IllegalStateException("Conexão com banco de produtos indisponível");
+        }
+        this.connection = connection;
+    }
 
-    public void insertProduto(Produto produto) {
-        String sql = "INSERT INTO produtos (nome_produto, categoria, preco) VALUES (?, ?, ?);";
-        try (PreparedStatement statement = this.connection.prepareStatement(sql)) {
-            statement.setString(1, produto.getNomeProduto());
-            statement.setString(2, produto.getCategoria());
-            statement.setDouble(3, produto.getPreco());
-            statement.executeUpdate();
-            System.out.println("Produto inserido com sucesso.");
+    public int insertProduto(Produto produto) {
+        final String sql = "INSERT INTO produtos (nome_produto, categoria, preco) VALUES (?, ?, ?)";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, produto.getNomeProduto());
+            stmt.setString(2, produto.getCategoria());
+            stmt.setDouble(3, produto.getPreco());
+            return stmt.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Falha ao inserir produto", e);
         }
     }
 
     public List<Produto> getAllProdutos() {
-        List<Produto> produtos = new ArrayList<>();
-        String sql = "SELECT * FROM produtos;";
-        try (PreparedStatement statement = this.connection.prepareStatement(sql);
-             ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                Produto produto = new Produto();
-                produto.setId(resultSet.getInt("id"));
-                produto.setNomeProduto(resultSet.getString("nome_produto"));
-                produto.setCategoria(resultSet.getString("categoria"));
-                produto.setPreco(resultSet.getDouble("preco"));
-                produtos.add(produto);
+        final List<Produto> produtos = new ArrayList<>();
+        final String sql = "SELECT id, nome_produto, categoria, preco FROM produtos ORDER BY id";
+        try (PreparedStatement stmt = connection.prepareStatement(sql);
+             ResultSet results = stmt.executeQuery()) {
+            while (results.next()) {
+                produtos.add(mapProduto(results));
+            }
+            return produtos;
+        } catch (SQLException e) {
+            // Não transformar falha de consulta em lista vazia HTTP 200.
+            throw new IllegalStateException("Falha ao listar produtos", e);
+        }
+    }
+
+    public int updateProduto(int id, Produto produto) {
+        final String sql = "UPDATE produtos SET nome_produto=?, categoria=?, preco=? WHERE id=?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, produto.getNomeProduto());
+            stmt.setString(2, produto.getCategoria());
+            stmt.setDouble(3, produto.getPreco());
+            stmt.setInt(4, id);
+            return stmt.executeUpdate(); // 0 = registro inexistente
+        } catch (SQLException e) {
+            throw new IllegalStateException("Falha ao atualizar produto", e);
+        }
+    }
+
+    public int deleteProduto(int id) {
+        final String sql = "DELETE FROM produtos WHERE id=?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            return stmt.executeUpdate(); // 0 = registro inexistente
+        } catch (SQLException e) {
+            throw new IllegalStateException("Falha ao excluir produto", e);
+        }
+    }
+
+    public Produto getProdutoById(int id) {
+        if (id <= 0) return null;
+        final String sql = "SELECT id, nome_produto, categoria, preco FROM produtos WHERE id=?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            try (ResultSet results = stmt.executeQuery()) {
+                if (!results.next()) return null; // cursor precisa ser avançado antes da leitura
+                return mapProduto(results);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return produtos;
-    }
-
-    public void updateProduto(int idProduto, Produto produto) {
-        String sql = "UPDATE produtos SET nome_produto = ?, categoria = ?, preco = ? WHERE id = ?;";
-        try (PreparedStatement statement = this.connection.prepareStatement(sql)) {
-            statement.setString(1, produto.getNomeProduto());
-            statement.setString(2, produto.getCategoria());
-            statement.setDouble(3, produto.getPreco());
-            statement.setInt(4, idProduto);
-            statement.executeUpdate();
-            System.out.println("Produto atualizado com sucesso.");
-        } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Falha ao consultar produto por ID", e);
         }
     }
 
-    public void deleteProduto(int id) {
-        String sql = "DELETE FROM produtos WHERE id = ?;";
-        try (PreparedStatement statement = this.connection.prepareStatement(sql)) {
-            statement.setInt(1, id);
-            statement.executeUpdate();
-            System.out.println("Produto excluído com sucesso.");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public Produto getProdutoById(int id){
-        Produto produto = new Produto();
-        String sql = "SELECT * FROM produtos WHERE id=?;";
-        try (PreparedStatement statement = this.connection.prepareStatement(sql)){
-            statement.setInt(1,id);
-            ResultSet resultSet = statement.executeQuery();
-            produto.setId(resultSet.getInt("id"));
-            produto.setNomeProduto(resultSet.getString("nome_produto"));
-            produto.setCategoria(resultSet.getString("categoria"));
-            produto.setPreco(resultSet.getDouble("preco"));
-            System.out.println("Busca por id concluída");
-            return produto;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+    private Produto mapProduto(ResultSet row) throws SQLException {
+        final Produto produto = new Produto();
+        produto.setId(row.getInt("id"));
+        produto.setNomeProduto(row.getString("nome_produto"));
+        produto.setCategoria(row.getString("categoria"));
+        produto.setPreco(row.getDouble("preco"));
+        return produto;
     }
 
     public void closeConnection() {
         try {
-            if (this.connection != null) {
-                this.connection.close();
-            }
+            connection.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Falha ao fechar conexão de produtos", e);
         }
     }
 }
