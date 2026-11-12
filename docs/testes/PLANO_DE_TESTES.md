@@ -19,3 +19,7 @@
 
 ## Camadas
 Testes unitários de modelos/serviços em Java, testes REST/Servlet com mocks e integração com banco efêmero. Cada módulo Maven deve ser executado em seu diretório; a execução de um não garante o outro. Registrar SHA, runtime Java, configuração sanitizada, estado e evidência por caso. Não usar credenciais locais em CI.
+
+## Execução FR-CRUD v1.1.0 — 12/11/2026
+
+As pendências FR-03..FR-08 de regras DAO, cursor, resposta HTTP do consumidor e serialização foram parcialmente cobertas com **12/12 testes JUnit3 PASS** (6 SQLite in-memory, 6 HTTP loopback) em [CI #43221444058](https://github.com/DanieldeAlmeida2024/API-Fabricante-Revendedor/actions/runs/43221444058), SHA `275221ee0a95c6ad45683d75478b31f0f3b88c9c`. Ver [matriz executada](EXECUCAO_JDBC_HTTP_LOCAL.md). FR-09 (Fujioka) e testes E2E Servlet e autenticação/TLS **continuam pendentes**, não considerar verificados por JUnit do DAO.

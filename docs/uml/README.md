@@ -6,3 +6,5 @@
 - [Sequência representativa](02_sequencia.puml)
 
 Os módulos e interfaces seguem o código existente; diagramas são fontes editáveis PlantUML.
+
+- [Sequência CRUD SQLite e integração Dell/HTTP com falha propagada](03_fluxo_crud_dell_sqlite.puml) — FR-CRUD v1.1.0 proposta.

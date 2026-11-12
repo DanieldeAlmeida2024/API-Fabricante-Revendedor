@@ -17,3 +17,7 @@ cd ProdutosAPI && mvn test
 ```
 
 Outros módulos têm comandos próprios; consultar seu `pom.xml` antes de executar. A matriz de cenários está em [testes](../testes/PLANO_DE_TESTES.md) e os diagramas em [UML](../uml/README.md).
+
+## Atualização FR-CRUD v1.1.0 — contrato implementado de SQLite e cliente Dell
+
+Os problemas de `ResultSet` e de sucesso falso documentados na v1.0.0 foram tratados nesta branch proposta: o DAO usa `next()`, retorna `null` quando não há ID, informa linhas modificadas e propaga `SQLException`; a camada Servlet responde status coerentes, e o consumidor Dell usa Gson + validação de 2xx. [Detalhamento próprio](CONTRATO_SQLITE_CRUD_V1_1.md). Os `.env` rastreados foram examinados **por nomes de campos** e contêm parâmetros de endpoint/porta, sem senha/token identificado; ainda devem sair do versionamento em revisão separada.

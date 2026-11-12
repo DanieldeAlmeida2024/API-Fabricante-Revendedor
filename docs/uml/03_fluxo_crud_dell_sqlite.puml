@@ -1,0 +1,59 @@
+@startuml
+title Fabricante–Revendedor v1.1.0 — CRUD e erro propagado (Dell → ProdutosAPI)
+actor "Cliente/Operador Dell" as Client
+participant "DellAPIService" as Dell
+participant "HttpClient Java" as Http
+participant "ProdutoController Servlet" as Controller
+participant "ProdutoService" as Service
+participant "ProdutoDao" as DAO
+database "SQLite produtos.db" as DB
+
+Client -> Dell : postProduto(produto)
+Dell -> Dell : Gson.toJson(produto)
+Dell -> Http : POST /ProdutosAPI/
+Http -> Controller : JSON
+Controller -> Service : post(req,res)
+Service -> Service : Validar nome/categoria/preço
+alt payload inválido
+  Service --> Http : HTTP 400
+else válido
+  Service -> DAO : insertProduto(produto)
+  DAO -> DB : PreparedStatement INSERT (?, ?, ?)
+  alt SQL falha
+    DB --> DAO : SQLException
+    DAO --> Service : IllegalStateException
+    Service --> Http : HTTP 500
+  else insert realizado
+    DB --> DAO : affectedRows=1
+    DAO --> Service : 1
+    Service --> Http : HTTP 201
+  end
+end
+Http --> Dell : status + body
+alt HTTP não-2xx
+  Dell --> Client : IOException (não afirmar sucesso)
+else HTTP 2xx
+  Dell --> Client : confirmação
+end
+
+Client -> Dell : getProduto(id)
+Dell -> Http : GET /ProdutosAPI/?id=id
+Http -> Controller : GET por ID
+Controller -> Service : get(req,res)
+Service -> DAO : getProdutoById(id)
+DAO -> DB : SELECT ... WHERE id=? e ResultSet.next()
+alt linha não existe
+  DB --> Service : null
+  Service --> Http : 404
+else encontrada
+  DB --> DAO : registro
+  DAO --> Service : Produto
+  Service --> Http : JSON objeto e 200
+end
+Http --> Dell : resposta
+Dell --> Client : Gson objeto ou erro status
+note bottom
+Testes CI: JDBC SQLite in-memory e HTTP loopback para Dell.
+Sem testes E2E Servlet/Tomcat, Fujioka ou produção.
+end note
+@enduml

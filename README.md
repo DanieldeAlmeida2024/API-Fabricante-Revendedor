@@ -212,3 +212,7 @@ Este repositório é intencionalmente simples para permitir experimentação e d
 ## Documentação detalhada e específica (v1.0.0)
 
 [Projeto](docs/projeto/ESPECIFICACAO.md) · [UML](docs/uml/README.md) · [Testes](docs/testes/PLANO_DE_TESTES.md) · [Versões](docs/controle/VERSIONAMENTO.md)
+
+## Correção de contrato CRUD / JDBC e cliente Dell — v1.1.0 proposta
+
+A consulta SQLite por ID agora avança o cursor; operações com erro ou ID ausente não geram falso sucesso. A camada `ProdutosAPI` distingue 201/400/404/500. O consumidor Dell serializa produto via Gson e rejeita HTTP não-2xx. Os testes utilizam SQLite em memória e `HttpServer` loopback; não usam bancos/serviços reais. Reproduzir com `mvn -B -ntp -f ProdutosAPI/pom.xml clean verify` e `mvn -B -ntp -f Dell/pom.xml clean verify`. [Projeto](docs/projeto/CONTRATO_SQLITE_CRUD_V1_1.md), [testes](docs/testes/EXECUCAO_JDBC_HTTP_LOCAL.md), [UML](docs/uml/03_fluxo_crud_dell_sqlite.puml), [versionamento](docs/controle/VERSIONAMENTO.md). O módulo Fujioka e a autenticação/TLS não foram alterados; uso real ainda exige revisão.
