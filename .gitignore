@@ -1,0 +1,14 @@
+# Configuração local de todos os WARs (inclusive subdiretórios).
+.env
+**/.env
+.env.*
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Bancos SQLite locais e saídas de build.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+**/target/
