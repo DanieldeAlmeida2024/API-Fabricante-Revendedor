@@ -1,4 +1,4 @@
-name: API Fabricante-Revendedor - ProdutosAPI SQLite CRUD
+name: API Fabricante-Revendedor - Contrato Java CRUD e consumidor Dell
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   produtos-api-java:
-    name: Java 17 + Maven verify + SQLite in-memory
+    name: Java 17 + Maven verify (ProdutosAPI e Dell)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -19,8 +19,12 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-          cache-dependency-path: ProdutosAPI/pom.xml
+          cache-dependency-path: |
+            ProdutosAPI/pom.xml
+            Dell/pom.xml
       - name: Validar e empacotar WAR ProdutosAPI sem usar banco real
         run: mvn -B -ntp -f ProdutosAPI/pom.xml clean verify
+      - name: Validar contrato do consumidor Dell com HTTP local
+        run: mvn -B -ntp -f Dell/pom.xml clean verify
       - name: Validar documentação versionada
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
