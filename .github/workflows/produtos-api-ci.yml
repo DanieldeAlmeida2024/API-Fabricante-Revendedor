@@ -1,0 +1,26 @@
+name: API Fabricante-Revendedor - ProdutosAPI SQLite CRUD
+
+on:
+  pull_request:
+  push:
+    branches: [main, fix/produtosapi-crud-sqlite-errors-20261112]
+
+permissions:
+  contents: read
+
+jobs:
+  produtos-api-java:
+    name: Java 17 + Maven verify + SQLite in-memory
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: ProdutosAPI/pom.xml
+      - name: Validar e empacotar WAR ProdutosAPI sem usar banco real
+        run: mvn -B -ntp -f ProdutosAPI/pom.xml clean verify
+      - name: Validar documentação versionada
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
