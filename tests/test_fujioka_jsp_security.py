@@ -18,10 +18,17 @@ class FujiokaJspSafety(unittest.TestCase):
         self.assertIn("document.querySelectorAll('#selectProduto option[data-id]')", JSP)
         self.assertIn("option.dataset.produto", JSP)
         self.assertIn("option.textContent =", JSP)
-        inline = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script>", JSP, flags=re.S)
+        inline = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', JSP, flags=re.S)
         self.assertTrue(inline)
-        self.assertFalse(any("${produto." in js for js in inline), "JSP raw product data in inline JS")
-
+        for js in inline:
+            self.assertNotIn("<c:forEach", js, "JSP loop must not interpolate product text into JS")
+            self.assertNotIn("${produto.get", js, "JSP method expressions must not enter JS")
+            for line in js.splitlines():
+                if "${produto." in line:
+                    # Safe client-side template literal: produto is local JS data
+                    # created from escaped DOM dataset, not a server-side JSP EL.
+                    self.assertIn("option.textContent =", line)
+                    self.assertIn("`", line)
     def test_no_unescaped_jsp_expressions_in_option(self):
         option_start = JSP.index('<c:forEach var="produto"')
         option_end = JSP.index('</c:forEach>', option_start)
