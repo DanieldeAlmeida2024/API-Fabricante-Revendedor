@@ -16,7 +16,7 @@ Os comandos exigem ambiente apropriado e não foram executados aqui.
 Dell/, fujioka/, ProdutosAPI/.
 
 ## Cuidados
-Existem arquivos .env rastreados em subprojetos; verificar imediatamente se contêm credenciais e rotacionar segredos se necessário. Projeto não é produção.
+Arquivos `.env` locais foram retirados do rastreamento neste PR. Copie `Dell/.env.example` para `Dell/.env` e `fujioka/.env.example` para `fujioka/.env` antes de executar. Os arquivos anteriores continham apenas endpoints `localhost` na revisão atual, mas **não** se deve presumir ausência de segredos em commits antigos: auditar histórico e revogar qualquer valor real que tenha sido publicado. Projeto de estudo, não homologado para produção.
 
 ## Documentos
 [Requisitos](docs/REQUISITOS.md) · [Arquitetura](docs/ARQUITETURA.md) · [UML](docs/UML.puml) · [Plano de testes](docs/PLANO_TESTES.md) · [Contexto IA](AGENTS.md).
