@@ -23,3 +23,22 @@ jobs:
           cache-dependency-path: ${{ matrix.modulo }}/pom.xml
       - name: Compilar, testar e empacotar módulo
         run: mvn --batch-mode --no-transfer-progress -f "${{ matrix.modulo }}/pom.xml" verify
+
+  validar-documentacao-seguranca:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Testar escaping JSP, contratos documentais e templates
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Impedir arquivos .env reais versionados
+        run: |
+          if [ -n "$(git ls-files -- Dell/.env fujioka/.env ProdutosAPI/.env)" ]; then
+            echo 'ERRO: configuração de ambiente privada versionada'
+            exit 1
+          fi
+          test -f Dell/.env.example
+          test -f fujioka/.env.example
