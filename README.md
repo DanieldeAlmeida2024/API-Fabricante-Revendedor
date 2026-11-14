@@ -1,25 +1,45 @@
-# API-Fabricante-Revendedor
+# API Fabricante ↔ Revendedor — Catálogo Java
 
-Prova de conceito Java de comunicação entre fabricante, revenda e catálogo de produtos.
+Laboratório de integração entre um fabricante (**Dell**, como nome fictício do exemplo), uma revenda (**Fujioka**) e uma API central de produtos. Cada um é um módulo Maven/Java Servlet/JSP, não um microsserviço pronto para produção.
 
-## Stack
-Java Servlets, Maven, JSP e persistência relacional.
+## Executar testes e validar os WARs
 
-## Primeira verificação
+Requer **Java 17 e Maven**. No diretório raiz:
+
 ```bash
-cd ProdutosAPI && mvn test
+mvn -B -ntp -f ProdutosAPI/pom.xml verify
+mvn -B -ntp -f Dell/pom.xml verify
+mvn -B -ntp -f fujioka/pom.xml verify
 ```
 
-Os comandos exigem ambiente apropriado e não foram executados aqui.
+O workflow `.github/workflows/contrato-catalogo.yml` executa os três comandos no GitHub Actions. Os testes do `ProdutosAPI` exercitam SQLite real em diretório temporário e simulam requisições/respostas de Servlet com Mockito. Os outros módulos passam por compilação e empacotamento, não por integração HTTP real.
 
-## Onde começar
-Dell/, fujioka/, ProdutosAPI/.
+## Contrato do catálogo `ProdutosAPI`
 
-## Cuidados
-Arquivos `.env` locais foram retirados do rastreamento neste PR. Copie `Dell/.env.example` para `Dell/.env` e `fujioka/.env.example` para `fujioka/.env` antes de executar. Os arquivos anteriores continham apenas endpoints `localhost` na revisão atual, mas **não** se deve presumir ausência de segredos em commits antigos: auditar histórico e revogar qualquer valor real que tenha sido publicado. Projeto de estudo, não homologado para produção.
+| Operação | Requisição | Resultado |
+| --- | --- | --- |
+| GET lista | `/` | 200 + array JSON |
+| GET item | `/?id=1` | 200 + produto; 404 quando não existe |
+| POST | `/` JSON | 201 ao criar |
+| PUT | `/?id=1` JSON | 200 se atualizado; 404 se ausente |
+| DELETE | `/?id=1` | 204 sem corpo; 404 se ausente |
 
-## Documentos
-[Requisitos](docs/REQUISITOS.md) · [Arquitetura](docs/ARQUITETURA.md) · [UML](docs/UML.puml) · [Plano de testes](docs/PLANO_TESTES.md) · [Contexto IA](AGENTS.md).
+JSON usado pelo Gson neste módulo:
+
+```json
+{"produto":"Notebook X","categoria":"Computadores","preco":2999.99}
+```
+
+O nome correto do campo é `produto` — não `nomeProduto`, como aparece em exemplos antigos do README original. Os contratos de Dell/Fujioka devem ser validados separadamente em HTTP antes de deploy.
+
+## Banco SQLite e segurança
+
+- O banco padrão fica em `produtos.db` no diretório de execução; para isolar, defina `PRODUTOS_DB_PATH` ou `-Dprodutos.db.path=/caminho/teste.db`.
+- DAO usa `PreparedStatement`, conexões abertas/fechadas a cada operação e informa erro de banco em vez de simular sucesso.
+- Regras HTTP validam IDs positivos, nomes/categorias, preço positivo e finito, limite de 65536 caracteres no corpo e `Content-Type`.
+- **Ainda não existe autenticação/autorização, TLS obrigatório, migrações de banco nem teste E2E com Tomcat.** Não exponha o serviço na internet.
+
+Documentação específica: [Arquitetura](docs/ARQUITETURA.md) · [Requisitos](docs/REQUISITOS.md) · [UML](docs/UML.puml) · [Plano de testes](docs/PLANO_TESTES.md).
 
 ---
 
