@@ -1,7 +1,14 @@
 package br.com.dellproducts.api.service;
+
 import br.com.dellproducts.api.DellAPI;
 import br.com.dellproducts.enums.Http;
 import br.com.dellproducts.model.Produto;
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
+
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URI;
@@ -9,116 +16,108 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 import static br.com.dellproducts.enums.Http.*;
 
 public abstract class DellAPIService {
-    static Gson gson = new Gson();
+    private static final Gson gson = new Gson();
     static DellAPI api = new DellAPI();
+    private static final HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
-    private static HttpResponse<String> requestHttp(String urlRequest, String paramsBodyJson, Enum method) throws IOException, InterruptedException {
-        HttpClient client = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_2)
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
-
-        if (method.equals(GET)) {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .GET()
-                    .uri(URI.create(urlRequest))
-                    .timeout(Duration.ofSeconds(10))
-                    .header("Accept", "application/json")
-                    .build();
-
-            return client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        } else if (method.equals(POST)){
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(urlRequest))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(paramsBodyJson))
-                    .build();
-
-            return client.send(request, HttpResponse.BodyHandlers.ofString());
-        } else if (method.equals(PUT)){
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(urlRequest))
-                    .header("Content-Type", "application/json")
-                    .PUT(HttpRequest.BodyPublishers.ofString(paramsBodyJson))
-                    .build();
-            return client.send(request, HttpResponse.BodyHandlers.ofString());
-        } else if (method.equals((DELETE))){
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(urlRequest))
-                    .DELETE()
-                    .build();
-            return client.send(request, HttpResponse.BodyHandlers.ofString());
-        }
-        return null;
+    private static String urlBase() {
+        return api.getHost() + api.getPorta() + api.getContextPath();
     }
 
+    private static HttpResponse<String> requestHttp(String urlRequest, String body, Http method)
+            throws IOException, InterruptedException {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(urlRequest))
+                .timeout(Duration.ofSeconds(10))
+                .header("Accept", "application/json");
+        if (method == GET) {
+            builder.GET();
+        } else if (method == POST) {
+            builder.header("Content-Type", "application/json; charset=utf-8")
+                   .POST(HttpRequest.BodyPublishers.ofString(body));
+        } else if (method == PUT) {
+            builder.header("Content-Type", "application/json; charset=utf-8")
+                   .PUT(HttpRequest.BodyPublishers.ofString(body));
+        } else if (method == DELETE) {
+            builder.DELETE();
+        } else {
+            throw new IllegalArgumentException("Método HTTP não suportado");
+        }
+        return client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    static void requireSuccess(int status) throws IOException {
+        if (status < 200 || status >= 300) {
+            // Não ecoar payload de erro: pode conter dados internos.
+            throw new IOException("API Produtos respondeu HTTP " + status);
+        }
+    }
+
+    static String jsonProduto(Produto produto) {
+        return gson.toJson(produto); // Escape correto para aspas, barras e Unicode.
+    }
+
+    static Produto decodeSingleProduct(String json) throws IOException {
+        try {
+            JsonElement root = JsonParser.parseString(json);
+            if (root.isJsonNull()) return null;
+            if (root.isJsonObject()) return gson.fromJson(root, Produto.class);
+            if (root.isJsonArray()) {
+                if (root.getAsJsonArray().isEmpty()) return null;
+                return gson.fromJson(root.getAsJsonArray().get(0), Produto.class);
+            }
+        } catch (JsonSyntaxException e) {
+            throw new IOException("Resposta JSON inválida da API Produtos", e);
+        }
+        throw new IOException("Formato de produto inesperado na resposta");
+    }
 
     public static List<Produto> getProdutos() throws IOException, InterruptedException {
-        try{
-            String urlRequest = api.getHost() + api.getPorta() + api.getContextPath();
-            HttpResponse<String> responseAPI = requestHttp(urlRequest, null, GET);
-            String listaProdutos = responseAPI.body();
-            System.out.println(listaProdutos);
-            Type listType = new TypeToken<List<Produto>>(){}.getType();
-            return gson.fromJson(listaProdutos, listType);
-        } catch (RuntimeException e) {
-            throw new RuntimeException(e);
+        HttpResponse<String> response = requestHttp(urlBase(), null, GET);
+        requireSuccess(response.statusCode());
+        try {
+            Type listType = new TypeToken<List<Produto>>() {}.getType();
+            List<Produto> products = gson.fromJson(response.body(), listType);
+            return products == null ? Collections.emptyList() : products;
+        } catch (JsonSyntaxException e) {
+            throw new IOException("Lista de produtos em formato inválido", e);
         }
     }
 
     public static Produto getProduto(int id) throws IOException, InterruptedException {
-        String urlRequest = api.getHost() + api.getPorta() + api.getContextPath() + "?id="+id;
-        HttpResponse<String> responseAPI = requestHttp(urlRequest, null, GET);
-        String listaProdutosJson = responseAPI.body();
-        Type listType = new TypeToken<List<Produto>>(){}.getType();
-        List<Produto> listaProdutos = gson.fromJson(listaProdutosJson, listType);
-        if (listaProdutos != null && !listaProdutos.isEmpty()) {
-            return listaProdutos.get(0);
-        } else {
-            return null;
-        }
+        if (id <= 0) throw new IOException("ID de produto inválido");
+        HttpResponse<String> response = requestHttp(urlBase() + "?id=" + id, null, GET);
+        requireSuccess(response.statusCode());
+        return decodeSingleProduct(response.body());
     }
 
     public static String postProduto(Produto produto) throws IOException, InterruptedException {
-        String params = "{\"produto\": \""+produto.getProduto()+"\", \"categoria\": \""+produto.getCategoria()+"\", \"preco\": "+produto.getPreco()+"}";
-        String urlRequest = api.getHost() + api.getPorta() + api.getContextPath();
-        HttpResponse<String> responseAPI = requestHttp(urlRequest, params, POST);
-        boolean sucesso = false;
-        String mensagem = "";
-
-        try {
-            sucesso = true;
-            mensagem = "Produto " + produto.getProduto() + " salvo com sucesso!";
-        } catch (Exception e) {
-            mensagem = "Erro interno ao salvar no banco de dados: " + e.getMessage();
-            sucesso = false;
-        }
-
-        if (sucesso) {
-            return mensagem;
-        } else {
-            return "Erro ao processar a requisição.";
-        }
+        if (produto == null) throw new IllegalArgumentException("Produto obrigatório");
+        HttpResponse<String> response = requestHttp(urlBase(), jsonProduto(produto), POST);
+        requireSuccess(response.statusCode());
+        return "Produto cadastrado com sucesso.";
     }
 
     public static String putProduto(Produto produto) throws IOException, InterruptedException {
-        String params =  "{\"produto\": \""+produto.getProduto()+"\", \"categoria\": \""+produto.getCategoria()+"\", \"preco\": "+produto.getPreco()+"}";
-        String urlRequest = api.getHost() + api.getPorta() + api.getContextPath() + "?id="+produto.getId();
-        HttpResponse<String> responseAPI = requestHttp(urlRequest, params, PUT);
-        return responseAPI.body();
+        if (produto == null || produto.getId() <= 0) throw new IllegalArgumentException("Produto ou ID inválido");
+        HttpResponse<String> response = requestHttp(
+                urlBase() + "?id=" + produto.getId(), jsonProduto(produto), PUT);
+        requireSuccess(response.statusCode());
+        return response.body();
     }
 
     public static String deleteProduto(int id) throws IOException, InterruptedException {
-        String urlRequest = api.getHost() + api.getPorta() + api.getContextPath()+"?id="+id;
-        HttpResponse<String> responseAPI= requestHttp(urlRequest,null, DELETE);
-        return responseAPI.body();
+        if (id <= 0) throw new IllegalArgumentException("ID de produto inválido");
+        HttpResponse<String> response = requestHttp(urlBase() + "?id=" + id, null, DELETE);
+        requireSuccess(response.statusCode());
+        return response.body();
     }
 }
