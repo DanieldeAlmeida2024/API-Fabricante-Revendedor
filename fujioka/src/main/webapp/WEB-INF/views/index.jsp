@@ -1,11 +1,10 @@
 <%@ page isELIgnored="false" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
-<%@ page import= "br.com.dellproducts.model.*" %>
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 
 
 <!DOCTYPE HTML>
-<html language='pt-Br'>
+<html lang="pt-BR">
 <head>
     <meta charset="utf-8">
     <title>Detalhes do Produto Dell</title>
@@ -37,13 +36,13 @@
                 <option value="">-- Selecione um Produto --</option>
                 <c:forEach var="produto" items="${getProdutos}">
                     <option
-                        value="${produto.getId()}"
-                        data-id="${produto.getId()}"
-                        data-produto="${produto.getProduto()}"
-                        data-categoria="${produto.getCategoria()}"
-                        data-preco="${produto.getPreco()}"
+                        value="<c:out value='${produto.id}'/>"
+                        data-id="<c:out value='${produto.id}'/>"
+                        data-produto="<c:out value='${produto.produto}'/>"
+                        data-categoria="<c:out value='${produto.categoria}'/>"
+                        data-preco="<c:out value='${produto.preco}'/>"
                     >
-                        ${produto.getId()} - ${produto.getProduto()} (${produto.getCategoria()})
+                        <c:out value="${produto.id}"/> - <c:out value="${produto.produto}"/> (<c:out value="${produto.categoria}"/>)
                     </option>
                 </c:forEach>
             </select>
@@ -72,16 +71,16 @@
     </div>
 
     <script>
-        const produtosData = [
-            <c:forEach var="produto" items="${getProdutos}" varStatus="status">
-                {
-                    id: ${produto.getId()},
-                    produto: "${produto.getProduto()}",
-                    categoria: "${produto.getCategoria()}",
-                    preco: ${produto.getPreco()}
-                }<c:if test="${!status.last}">,</c:if>
-            </c:forEach>
-        ];
+        // Dados lidos apenas do DOM com atributos HTML escapados por <c:out>.
+        // Nunca interpolar texto de fornecedor diretamente em strings JavaScript.
+        const produtosData = Array.from(
+            document.querySelectorAll('#selectProduto option[data-id]')
+        ).map(option => ({
+            id: Number(option.dataset.id),
+            produto: option.dataset.produto || '',
+            categoria: option.dataset.categoria || '',
+            preco: Number(option.dataset.preco),
+        }));
 
         function exibirDetalhesProduto() {
             const select = document.getElementById('selectProduto');

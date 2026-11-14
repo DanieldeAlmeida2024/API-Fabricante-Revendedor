@@ -54,3 +54,11 @@ Os nomes das organizações são exemplos didáticos, não representam parceria 
 ## Documentação
 
 [Requisitos](docs/REQUISITOS.md) · [Arquitetura](docs/ARQUITETURA.md) · [UML](docs/UML.puml) · [Plano de testes](docs/PLANO_TESTES.md).
+
+## Contratos HTTP do fabricante e escape do catálogo da revenda
+
+Os clientes Java **Dell** e **Fujioka** passaram a validar resposta HTTP antes de usar o corpo JSON. O Dell serializa produtos via Gson (incluindo aspas e Unicode) e não confirma operações POST/PUT/DELETE após um 4xx/5xx. Na Fujioka, falha da dependência vira HTTP **502**, interrupção vira **503**, e a JSP escapa atributos e texto do catálogo em vez de inserir nomes de produtos diretamente num literal JavaScript.
+
+Os três módulos têm builds independentes em Maven. Há testes de cliente HTTP com `HttpServer` local e testes estáticos para JSP; ainda **não existe evidência de uma execução E2E com Tomcat/Jasper ou de autenticação e TLS**. Os arquivos `.env.example` são modelos que o código Java não carrega automaticamente.
+
+[Contrato do consumidor Fujioka](docs/projeto/FUJIOKA_INTEGRACAO_E_JSP.md) · [Plano de testes Fujioka](docs/testes/FUJIOKA_CONTRATOS_JSP.md) · [UML de integração](docs/uml/04_fujioka_catalogo_seguranca.puml) · [Histórico](docs/controle/VERSIONAMENTO.md).

@@ -1,0 +1,34 @@
+@startuml
+title API Fabricante-Revendedor — Fujioka: erro upstream e escape da JSP (FR-FUJ 1.2)
+actor Visitante
+participant "ProdutosDellController /dell" as Servlet
+participant "DellAPIService Fujioka" as Http
+participant "ProdutosAPI (upstream)" as Api
+participant "index.jsp / JSTL" as JSP
+participant "JavaScript browser" as JS
+
+Visitante -> Servlet : GET /dell
+Servlet -> Http : getProdutosDell()
+Http -> Api : GET /ProdutosAPI/ (timeout 10s)
+alt HTTP não-2xx ou JSON inválido
+  Api --> Http : status 404/503 ou payload inválido
+  Http --> Servlet : IOException sem corpo sensível
+  Servlet --> Visitante : HTTP 502 (não faz forward)
+else interrupção
+  Http --> Servlet : InterruptedException
+  Servlet -> Servlet : Thread.interrupt()
+  Servlet --> Visitante : HTTP 503
+else 2xx + JSON array
+  Api --> Http : [{id, produto, categoria, preco}]
+  Http --> Servlet : List<ProdutoDell>
+  Servlet -> JSP : forward(getProdutos)
+  JSP -> JSP : c:out escapeXml em texto/atributos
+  JSP --> Visitante : HTML com dados codificados
+  Visitante -> JS : pesquisar/selecionar
+  JS -> JS : dataset do DOM e textContent
+end
+note over JSP,JS
+Sem interpolação direta de produto em string JS.
+Pendente execução real de JSP/Tomcat e avaliação XSS dinâmica.
+end note
+@enduml

@@ -26,3 +26,17 @@ Comando: `mvn -B -ntp -f ProdutosAPI/pom.xml verify`. O GitHub Actions executa t
 | BUILD-01 | Maven | `verify` de ProdutosAPI, Dell e fujioka |
 
 **Limites:** testes HTTP do serviço usam mocks (não sobem Tomcat); SQLite é realmente exercitado em arquivos temporários. O build dos consumidores não comprova E2E nem disponibilidade dos endpoints. Isso exige ambiente isolado com três WARs, testes HTTP e verificação de contrato antes de uso real.
+
+## FR-MAIN 1.3.0 — contratos Dell/Fujioka sobre a main atual
+
+| ID | Cenário | Critério de aceitação |
+| --- | --- | --- |
+| FR-D01 | Cliente Dell recebe HTTP 4xx/5xx | Erro propagado, sem declarar POST bem-sucedido |
+| FR-D02 | Produto tem aspas ou Unicode | Serialização Gson preserva JSON válido |
+| FR-F01 | Fujioka recebe catálogo inválido ou status de falha | Não interpreta falha como lista vazia |
+| FR-F02 | Servlet Fujioka recebe erro da API | HTTP 502/503; não faz forward com catálogo parcial |
+| FR-F03 | JSP recebe texto de catálogo não confiável | Escape nos atributos/textos e nenhuma interpolação direta em JavaScript |
+| FR-E01 | `.env` de módulos é rastreado | Reprovar no CI, preservar `.env.example` |
+| FR-C01 | Maven dos três módulos + documentação | CI `.github/workflows/contrato-catalogo.yml` sem dependência externa |
+
+Separação: tests HTTP `HttpServer` e validações estáticas **não** garantem renderização real da JSP em Tomcat; E2E de autenticação, XSS dinâmico, URLs configuráveis e TLS continuam pendentes.

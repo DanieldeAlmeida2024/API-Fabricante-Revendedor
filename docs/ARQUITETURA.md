@@ -32,3 +32,9 @@ O JSON do modelo atual possui o campo **`produto`** (nome interno do atributo), 
 ## Segurança, limites e trade-offs
 
 A antiga regex de bloqueio SQL foi removida: não protegia JSON e rejeitava texto legítimo. A mitigação real aqui é SQL parametrizado e validação de dados. Não há autenticação/autorização, rate limiting, TLS obrigatório, controle de concorrência de escrita, pool de conexões nem versionamento de banco; **não implantar na internet como API de fabricante**. Os clientes Dell/Fujioka continuam dependentes de URLs e Tomcat locais e precisam de testes de contrato HTTP ponta a ponta.
+
+## Clientes HTTP e apresentação JSP — FR-MAIN 1.3.0
+
+A `ProdutosAPI` da main conserva o DAO SQLite com conexão curta, SQL parametrizado e testes JUnit5. O cliente `DellAPIService` valida HTTP 2xx e usa Gson ao enviar e ler o catálogo. A revenda Fujioka interpreta arrays de produtos, transforma falhas upstream em 502/503 e só encaminha dados válidos ao template JSP. Na renderização, a JSP aplica `c:out` aos campos e o JavaScript obtém valores por `dataset` do DOM em vez de receber interpolação de strings externas.
+
+Essas correções vieram de branches antigas encadeadas, mas foram reaplicadas exclusivamente nos arquivos Dell/Fujioka sobre a **main atual**, sem substituir o código mais novo da ProdutosAPI. Uma implantação pública ainda depende de testes Tomcat/JSP, autenticação, TLS, configuração segura de endpoints e proteção de recursos.
