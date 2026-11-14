@@ -1,0 +1,25 @@
+name: Catálogo Java — testes e WAR dos módulos
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  maven:
+    strategy:
+      fail-fast: false
+      matrix:
+        modulo: [ProdutosAPI, Dell, fujioka]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: ${{ matrix.modulo }}/pom.xml
+      - name: Compilar, testar e empacotar módulo
+        run: mvn --batch-mode --no-transfer-progress -f "${{ matrix.modulo }}/pom.xml" verify

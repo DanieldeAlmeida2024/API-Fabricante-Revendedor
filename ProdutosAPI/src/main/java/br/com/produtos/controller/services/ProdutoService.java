@@ -3,141 +3,185 @@ package br.com.produtos.controller.services;
 import br.com.produtos.model.Produto;
 import br.com.produtos.persistence.ProdutoDao;
 import com.google.gson.Gson;
-
-import javax.servlet.ServletException;
+import com.google.gson.JsonParseException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public abstract class ProdutoService {
-    private static final Gson gson = new Gson();
-    static ProdutoDao dao = new ProdutoDao();
-    public static void get(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+/** Regras HTTP do catálogo. Os clientes Dell/Fujioka continuam usando o contrato JSON. */
+public final class ProdutoService {
+    private static final Gson GSON = new Gson();
+    private static final Logger LOG = Logger.getLogger(ProdutoService.class.getName());
+    private static final int MAX_BODY_CHARS = 65_536;
 
-        //GET Se passar o parametro ID
+    private final ProdutoDao dao;
+
+    public ProdutoService() {
+        this(new ProdutoDao());
+    }
+
+    public ProdutoService(ProdutoDao dao) {
+        this.dao = Objects.requireNonNull(dao);
+    }
+
+    public void get(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String idParam = request.getParameter("id");
-        if (idParam != null && !idParam.isEmpty()) {
-            try{
-                Produto produto = dao.getProdutoById(Integer.parseInt(request.getParameter("id")));
-                response.setContentType("application/json");
-                response.setCharacterEncoding("UTF-8");
-                String jsonResponse = gson.toJson(produto);
-                response.getWriter().write(jsonResponse);
-            } catch (NumberFormatException | IOException e) {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                try {
-                    response.getWriter().write("{\"error\":\"ID inválido ou erro interno.\"}");
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
-                }
-                e.printStackTrace();
+        if (idParam != null) {
+            Integer id = parseId(idParam);
+            if (id == null) {
+                json(response, HttpServletResponse.SC_BAD_REQUEST, Map.of("erro", "ID inválido."));
+                return;
             }
-        } else { //GET Se não passar, Busca todos os registros
             try {
-                List<Produto> produtos = dao.getAllProdutos();
-                response.setContentType("application/json");
-                response.setCharacterEncoding("UTF-8");
-                Gson gson = new Gson();
-                String jsonResponse = gson.toJson(produtos);
-                response.getWriter().write(jsonResponse);
-            } catch (NumberFormatException | IOException e){
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                try {
-                    response.getWriter().write("{\"error\":\"erro interno.\"}");
-                } catch (IOException ioException) {
-                    ioException.printStackTrace();
+                Produto produto = dao.getProdutoById(id);
+                if (produto == null) {
+                    json(response, HttpServletResponse.SC_NOT_FOUND,
+                            Map.of("erro", "Produto não encontrado."));
+                    return;
                 }
-                e.printStackTrace();
+                json(response, HttpServletResponse.SC_OK, produto);
+            } catch (IllegalStateException error) {
+                internalError(response, error);
             }
-        }
-    }
-        public static void post(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-            request.setCharacterEncoding("UTF-8");
-
-            String jsonBody = null;
-            try (BufferedReader reader = request.getReader()) {
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    sb.append(line);
-                }
-                jsonBody = sb.toString();
-                jsonBody = jsonBody.trim();
-                Produto produto = gson.fromJson(jsonBody, Produto.class);
-
-                System.out.println("Produto: " + produto.getNomeProduto() + " Categoria: " + produto.getCategoria() + " Preço: " + produto.getPreco());
-
-                if (produto != null && produto.getNomeProduto() != null && produto.getCategoria() != null && produto.getPreco() > 0) {
-                    dao.insertProduto(produto);
-                    response.setStatus(HttpServletResponse.SC_CREATED);
-                    response.getWriter().write(gson.toJson("Produto adicionado com sucesso."));
-                } else {
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    response.getWriter().write(gson.toJson("Dados do produto inválidos."));
-                }
-            } catch (com.google.gson.JsonSyntaxException e) {
-                System.err.println("Erro de sintaxe JSON. Body: [" + jsonBody + "]");
-                e.printStackTrace();
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write(gson.toJson("Erro: O JSON enviado está malformado."));
-            } catch (Exception e) {
-                System.err.println("Erro inesperado no servidor: " + e.getMessage());
-                e.printStackTrace();
-                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                response.getWriter().write(gson.toJson("Erro ao processar a requisição."));
-            }
-        }
-
-    public static void put(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException{
-        int idProduto = Integer.parseInt(request.getParameter("id"));
-        if (idProduto == 0) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write(gson.toJson("O parâmetro 'ID' é obrigatório."));
             return;
         }
-
-        String jsonBody = null;
-        try (BufferedReader reader = request.getReader()) {
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-            jsonBody = sb.toString();
-            jsonBody = jsonBody.trim();
-            Produto produtoAtualizado = gson.fromJson(jsonBody, Produto.class);
-            if (produtoAtualizado != null && produtoAtualizado.getNomeProduto() != null && produtoAtualizado.getCategoria() != null && produtoAtualizado.getPreco() > 0) {
-                dao.updateProduto(idProduto, produtoAtualizado);
-                response.setStatus(HttpServletResponse.SC_OK);
-                response.getWriter().write(gson.toJson("Produto atualizado com sucesso."));
-            } else {
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write(gson.toJson("Dados do produto inválidos."));
-            }
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write(gson.toJson("Erro ao processar a requisição."));
-        }
-    }
-    public static void delete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException{
-        int idProduto = Integer.parseInt(request.getParameter("id"));
-        if (idProduto == 0) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write(gson.toJson("O parâmetro 'ID' é obrigatório para exclusão."));
-            return;
-        }
-
         try {
-            dao.deleteProduto(idProduto);
-            response.setStatus(HttpServletResponse.SC_OK);
-            response.getWriter().write(gson.toJson("Produto excluído com sucesso."));
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            response.getWriter().write(gson.toJson("Erro ao excluir o produto."));
+            List<Produto> produtos = dao.getAllProdutos();
+            json(response, HttpServletResponse.SC_OK, produtos);
+        } catch (IllegalStateException error) {
+            internalError(response, error);
         }
+    }
+
+    public void post(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Produto produto = readProduto(request, response);
+        if (produto == null) return;
+        try {
+            dao.insertProduto(produto);
+            json(response, HttpServletResponse.SC_CREATED,
+                    Map.of("mensagem", "Produto adicionado com sucesso."));
+        } catch (IllegalStateException error) {
+            internalError(response, error);
+        }
+    }
+
+    public void put(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Integer id = parseId(request.getParameter("id"));
+        if (id == null) {
+            json(response, HttpServletResponse.SC_BAD_REQUEST, Map.of("erro", "ID inválido."));
+            return;
+        }
+        Produto produto = readProduto(request, response);
+        if (produto == null) return;
+        try {
+            if (!dao.updateProduto(id, produto)) {
+                json(response, HttpServletResponse.SC_NOT_FOUND,
+                        Map.of("erro", "Produto não encontrado."));
+                return;
+            }
+            json(response, HttpServletResponse.SC_OK,
+                    Map.of("mensagem", "Produto atualizado com sucesso."));
+        } catch (IllegalStateException error) {
+            internalError(response, error);
+        }
+    }
+
+    public void delete(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Integer id = parseId(request.getParameter("id"));
+        if (id == null) {
+            json(response, HttpServletResponse.SC_BAD_REQUEST, Map.of("erro", "ID inválido."));
+            return;
+        }
+        try {
+            if (!dao.deleteProduto(id)) {
+                json(response, HttpServletResponse.SC_NOT_FOUND,
+                        Map.of("erro", "Produto não encontrado."));
+                return;
+            }
+            response.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        } catch (IllegalStateException error) {
+            internalError(response, error);
+        }
+    }
+
+    static Integer parseId(String valor) {
+        if (valor == null || !valor.matches("[0-9]{1,10}")) return null;
+        try {
+            int id = Integer.parseInt(valor);
+            return id > 0 ? id : null;
+        } catch (NumberFormatException error) {
+            return null;
+        }
+    }
+
+    private Produto readProduto(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        String contentType = request.getContentType();
+        if (contentType == null ||
+                !contentType.toLowerCase(java.util.Locale.ROOT).split(";", 2)[0].trim()
+                        .equals("application/json")) {
+            json(response, HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE,
+                    Map.of("erro", "Envie Content-Type: application/json."));
+            return null;
+        }
+
+        StringBuilder body = new StringBuilder();
+        try (Reader reader = request.getReader()) {
+            char[] chunk = new char[4096];
+            int read;
+            while ((read = reader.read(chunk)) != -1) {
+                if (body.length() + read > MAX_BODY_CHARS) {
+                    json(response, HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE,
+                            Map.of("erro", "Corpo JSON acima de 65536 caracteres."));
+                    return null;
+                }
+                body.append(chunk, 0, read);
+            }
+        }
+        try {
+            Produto produto = GSON.fromJson(body.toString(), Produto.class);
+            validarProduto(produto);
+            produto.setNomeProduto(produto.getNomeProduto().trim());
+            produto.setCategoria(produto.getCategoria().trim());
+            return produto;
+        } catch (JsonParseException | IllegalArgumentException error) {
+            json(response, HttpServletResponse.SC_BAD_REQUEST,
+                    Map.of("erro", "Dados do produto ou JSON inválidos."));
+            return null;
+        }
+    }
+
+    static void validarProduto(Produto produto) {
+        if (produto == null || produto.getNomeProduto() == null ||
+                produto.getCategoria() == null ||
+                produto.getNomeProduto().isBlank() || produto.getCategoria().isBlank() ||
+                produto.getNomeProduto().length() > 150 ||
+                produto.getCategoria().length() > 100 ||
+                !Double.isFinite(produto.getPreco()) || produto.getPreco() <= 0) {
+            throw new IllegalArgumentException("Produto inválido.");
+        }
+    }
+
+    private static void json(HttpServletResponse response, int status, Object dados)
+            throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader("Cache-Control", "no-store");
+        response.setHeader("X-Content-Type-Options", "nosniff");
+        response.getWriter().write(GSON.toJson(dados));
+    }
+
+    private static void internalError(HttpServletResponse response, IllegalStateException error)
+            throws IOException {
+        LOG.log(Level.SEVERE, "Falha de persistência no catálogo de produtos.", error);
+        json(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                Map.of("erro", "Falha interna ao processar a solicitação."));
     }
 }
-
-

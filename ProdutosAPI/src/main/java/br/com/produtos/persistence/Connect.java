@@ -5,28 +5,57 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-public class Connect {
-    private Connection connection;
+/**
+ * Abre uma conexão SQLite por operação.
+ *
+ * O caminho do banco pode ser configurado por `PRODUTOS_DB_PATH` ou
+ * pela propriedade JVM `produtos.db.path`. O padrão didático é produtos.db.
+ */
+public final class Connect {
+    private final String jdbcUrl;
+
     public Connect() {
-        try {
-            Class.forName("org.sqlite.JDBC");
-            this.connection = DriverManager.getConnection("jdbc:sqlite:produtos.db");
-            createTable(this.connection);
-        } catch (ClassNotFoundException | SQLException e) {
-            e.printStackTrace();
-        }
-    }
-    public Connection getConnection(){
-        return this.connection;
+        this("jdbc:sqlite:" + databasePath());
     }
 
-    private void createTable(Connection connection) throws SQLException {
+    public Connect(String jdbcUrl) {
+        if (jdbcUrl == null || !jdbcUrl.startsWith("jdbc:sqlite:")) {
+            throw new IllegalArgumentException("A URL precisa usar jdbc:sqlite:.");
+        }
+        this.jdbcUrl = jdbcUrl;
+    }
+
+    private static String databasePath() {
+        String property = System.getProperty("produtos.db.path");
+        if (property != null && !property.isBlank()) {
+            return property;
+        }
+        String env = System.getenv("PRODUTOS_DB_PATH");
+        return env == null || env.isBlank() ? "produtos.db" : env;
+    }
+
+    public Connection getConnection() {
+        try {
+            Connection connection = DriverManager.getConnection(jdbcUrl);
+            try {
+                createTable(connection);
+                return connection;
+            } catch (SQLException error) {
+                connection.close();
+                throw error;
+            }
+        } catch (SQLException error) {
+            throw new IllegalStateException("Não foi possível acessar o catálogo SQLite.", error);
+        }
+    }
+
+    private static void createTable(Connection connection) throws SQLException {
         String sql = "CREATE TABLE IF NOT EXISTS produtos (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 "nome_produto TEXT NOT NULL," +
                 "categoria TEXT NOT NULL," +
-                "preco REAL NOT NULL" +
-                ");";
+                "preco REAL NOT NULL CHECK (preco > 0)" +
+                ")";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.execute();
         }
