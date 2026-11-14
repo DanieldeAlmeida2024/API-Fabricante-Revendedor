@@ -1,10 +1,27 @@
 @startuml
-title API-Fabricante-Revendedor - componentes conceituais
-actor Operador
-component Entrada
-component Aplicacao
-component Infraestrutura
-Operador --> Entrada
-Entrada --> Aplicacao
-Aplicacao --> Infraestrutura
+title Catálogo de produtos — Java Servlet / SQLite
+actor "Cliente Dell / Fujioka" as Consumer
+component "ProdutoController" as Controller
+component "ProdutoService" as Service
+component "ProdutoDao" as DAO
+component "Connect" as Connect
+database "produtos.db SQLite" as SQLite
+
+Consumer --> Controller : GET POST PUT DELETE /
+Controller --> Service : request, response
+Service --> DAO : CRUD validado
+DAO --> Connect : getConnection()
+Connect --> SQLite : abrir conexão, CREATE TABLE
+DAO --> SQLite : PreparedStatement
+note right of Service
+  400, 404, 413, 415
+  201 POST, 204 DELETE
+  500 falha SQLite
+end note
+note bottom of DAO
+  1 conexão por operação
+  try-with-resources
+  update/delete só têm sucesso
+  se afetarem linha
+end note
 @enduml
