@@ -85,6 +85,23 @@ public class DellAPIServiceTest extends TestCase {
         assertNull(DellAPIService.getProdutoDell(3));
     }
 
+    public void testGetByIdRejectsWrongIdAndAmbiguousLegacyArray() throws Exception {
+        body.set("{\"id\":9,\"produto\":\"Errado\",\"categoria\":\"Teste\",\"preco\":1.0}");
+        try {
+            DellAPIService.getProdutoDell(3);
+            fail("Produto de outro ID não pode ser retornado");
+        } catch (IOException expected) {
+            assertTrue(expected.getMessage().contains("ID diferente"));
+        }
+        body.set("[{\"id\":3},{\"id\":4}]");
+        try {
+            DellAPIService.getProdutoDell(3);
+            fail("Lista com mais de um produto não é retorno válido de consulta individual");
+        } catch (IOException expected) {
+            assertTrue(expected.getMessage().contains("múltiplos"));
+        }
+    }
+
     public void testGetIdRejectsInvalidIdAnd404() throws Exception {
         try {
             DellAPIService.getProdutoDell(0);

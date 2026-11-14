@@ -68,12 +68,21 @@ public abstract class DellAPIService {
         try {
             final JsonElement parsed = JsonParser.parseString(raw);
             if (parsed.isJsonNull()) return null;
-            if (parsed.isJsonObject()) return gson.fromJson(parsed, ProdutoDell.class);
-            if (parsed.isJsonArray()) {
+            final ProdutoDell product;
+            if (parsed.isJsonObject()) {
+                product = gson.fromJson(parsed, ProdutoDell.class);
+            } else if (parsed.isJsonArray()) {
                 final List<ProdutoDell> values = parseCatalog(raw);
-                return values.isEmpty() ? null : values.get(0);
+                if (values.isEmpty()) return null;
+                if (values.size() != 1) throw new IOException("Consulta por ID retornou múltiplos produtos");
+                product = values.get(0);
+            } else {
+                throw new IOException("Formato inválido de produto upstream");
             }
-            throw new IOException("Formato inválido de produto upstream");
+            if (product != null && product.getId() != id) {
+                throw new IOException("Catálogo upstream retornou ID diferente do solicitado");
+            }
+            return product;
         } catch (JsonSyntaxException | IllegalStateException e) {
             throw new IOException("JSON inválido em produto upstream", e);
         }

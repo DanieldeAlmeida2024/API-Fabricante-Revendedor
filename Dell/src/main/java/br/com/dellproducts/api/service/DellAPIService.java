@@ -72,6 +72,9 @@ public abstract class DellAPIService {
             if (root.isJsonObject()) return gson.fromJson(root, Produto.class);
             if (root.isJsonArray()) {
                 if (root.getAsJsonArray().isEmpty()) return null;
+                if (root.getAsJsonArray().size() != 1) {
+                    throw new IOException("Consulta por ID retornou múltiplos produtos");
+                }
                 return gson.fromJson(root.getAsJsonArray().get(0), Produto.class);
             }
         } catch (JsonSyntaxException e) {
@@ -96,7 +99,11 @@ public abstract class DellAPIService {
         if (id <= 0) throw new IOException("ID de produto inválido");
         HttpResponse<String> response = requestHttp(urlBase() + "?id=" + id, null, GET);
         requireSuccess(response.statusCode());
-        return decodeSingleProduct(response.body());
+        Produto product = decodeSingleProduct(response.body());
+        if (product != null && product.getId() != id) {
+            throw new IOException("API Produtos respondeu um ID diferente do solicitado");
+        }
+        return product;
     }
 
     public static String postProduto(Produto produto) throws IOException, InterruptedException {

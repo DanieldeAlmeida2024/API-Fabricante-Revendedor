@@ -84,6 +84,23 @@ public class DellAPIServiceTest extends TestCase {
         assertEquals(7, result.getId());
     }
 
+    public void testGetSingleRejectsWrongProductIdAndMultiItemArray() throws Exception {
+        responseBody.set("{\"id\":8,\"produto\":\"Outro\",\"categoria\":\"Hardware\",\"preco\":1.0}");
+        try {
+            DellAPIService.getProduto(7);
+            fail("ID divergente não pode ser aceito");
+        } catch (IOException expected) {
+            assertTrue(expected.getMessage().contains("ID diferente"));
+        }
+        responseBody.set("[{\"id\":7},{\"id\":8}]");
+        try {
+            DellAPIService.getProduto(7);
+            fail("Múltiplos registros não podem satisfazer GET por ID");
+        } catch (IOException expected) {
+            assertTrue(expected.getMessage().contains("múltiplos"));
+        }
+    }
+
     public void testGetAllSupportsListResponse() throws Exception {
         responseBody.set("[{\"id\":1,\"produto\":\"SSD\",\"categoria\":\"Storage\",\"preco\":29.0}]");
         List<Produto> result = DellAPIService.getProdutos();
